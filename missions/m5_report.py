@@ -51,8 +51,24 @@ def run(verbose: bool = True) -> dict:
         "carbon_g": sustainability.carbon_g(wh, "us-east-1"),
         "best_region": min(sustainability.REGION_CARBON, key=sustainability.REGION_CARBON.get),
     }
+    reasoning = dict(r2["reasoning"])
+    reasoning["cap_cost_savings_monthly"] = reasoning["cap_cost_savings_daily"] * DAYS
+    extensions = {
+        "cache": {
+            "avg_reads": r2["cache"]["avg_reads"],
+            "savings_monthly": r2["cache"]["savings_daily"] * DAYS,
+            "policy_by_tier": r2["cache"]["policy_by_tier"],
+        },
+        "reasoning": reasoning,
+    }
 
-    md = report.build_report(baseline, optimized, levers, sustainability=sust)
+    md = report.build_report(
+        baseline,
+        optimized,
+        levers,
+        sustainability=sust,
+        extensions=extensions,
+    )
     out_md = os.path.join(ROOT, "outputs", "report.md")
     os.makedirs(os.path.dirname(out_md), exist_ok=True)
     with open(out_md, "w") as f:

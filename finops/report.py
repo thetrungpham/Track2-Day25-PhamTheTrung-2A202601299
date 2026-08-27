@@ -3,7 +3,8 @@ from __future__ import annotations
 
 
 def build_report(baseline_usd: float, optimized_usd: float, levers: dict,
-                 sustainability: dict | None = None, period: str = "monthly") -> str:
+                 sustainability: dict | None = None, period: str = "monthly",
+                 extensions: dict | None = None) -> str:
     """Return a markdown cost-optimization report."""
     savings = baseline_usd - optimized_usd
     pct = (savings / baseline_usd * 100.0) if baseline_usd > 0 else 0.0
@@ -22,6 +23,46 @@ def build_report(baseline_usd: float, optimized_usd: float, levers: dict,
     ]
     for name, amount in levers.items():
         lines.append(f"| {name} | ${amount:,.0f} |")
+    if extensions:
+        cache = extensions.get("cache")
+        reasoning = extensions.get("reasoning")
+        lines += [
+            "",
+            "## Your Turn Extensions",
+            "",
+        ]
+        if cache:
+            lines += [
+                "### Extension 3 - Cache economics",
+                "",
+                f"- Estimated average cache reads per prefix: {cache.get('avg_reads', 0):.1f}",
+                f"- Measured cache savings: ${cache.get('savings_monthly', 0):,.0f}/month",
+                "",
+                "| Model tier | Break-even reads | Worth it? |",
+                "|---|---:|---|",
+            ]
+            for tier, policy in cache.get("policy_by_tier", {}).items():
+                lines.append(
+                    f"| {tier} | {policy.get('break_even_reads', 0):.2f} | "
+                    f"{policy.get('worth_it', False)} |"
+                )
+        if reasoning:
+            lines += [
+                "",
+                "### Extension 4 - Reasoning budget",
+                "",
+                (
+                    f"- Reasoning is {reasoning.get('request_pct', 0):.1f}% of requests, "
+                    f"{reasoning.get('cost_pct', 0):.1f}% of optimized inference cost, "
+                    f"and {reasoning.get('wh_pct', 0):.1f}% of inference energy."
+                ),
+                (
+                    f"- Cap to {reasoning.get('cap_token_pct', 10):.1f}% served tokens saves "
+                    f"${reasoning.get('cap_cost_savings_monthly', 0):,.0f}/month and "
+                    f"{reasoning.get('cap_wh_savings_daily', 0):,.0f} Wh/day."
+                ),
+                f"- Routing rule: {reasoning.get('routing_rule', 'n/a')}",
+            ]
     if sustainability:
         lines += [
             "",
